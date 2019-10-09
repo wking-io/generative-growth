@@ -1,0 +1,15 @@
+{
+  "name": "generative-growth",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Will King <contact@wking.io> (https://www.wking.io/)",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "canvas-sketch": "0.7.0",
+    "three": "0.109.0"
+  }
+}
