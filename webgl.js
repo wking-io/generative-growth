@@ -8,8 +8,8 @@ const canvasSketch = require('canvas-sketch');
 
 const maxParticleCount = 1000;
 const particleCount = 500;
-const r = 700;
-const rHalf = r / 2;
+const d = 700;
+const r = d / 2;
 const effectController = {
   showDots: true,
   showLines: true,
@@ -85,9 +85,9 @@ const sketch = ({ context }) => {
   const particlesData = [];
 
   for (let i = 0; i < maxParticleCount; i++) {
-    const x = Math.random() * r - rHalf;
-    const y = Math.random() * r - rHalf;
-    const z = Math.random() * r - rHalf;
+    const x = Math.random() * d - r;
+    const y = Math.random() * d - r;
+    const z = Math.random() * d - r;
     particlePositions[xBuffer(i)] = x;
     particlePositions[yBuffer(i)] = y;
     particlePositions[zBuffer(i)] = z;
@@ -159,18 +159,18 @@ const sketch = ({ context }) => {
       particlePositions[yBuffer(i)] += particleData.velocity.y;
       particlePositions[zBuffer(i)] += particleData.velocity.z;
       if (
-        particlePositions[yBuffer(i)] < -rHalf ||
-        particlePositions[yBuffer(i)] > rHalf
+        particlePositions[yBuffer(i)] < -r ||
+        particlePositions[yBuffer(i)] > r
       )
         particleData.velocity.y = -particleData.velocity.y;
       if (
-        particlePositions[xBuffer(i)] < -rHalf ||
-        particlePositions[xBuffer(i)] > rHalf
+        particlePositions[xBuffer(i)] < -r ||
+        particlePositions[xBuffer(i)] > r
       )
         particleData.velocity.x = -particleData.velocity.x;
       if (
-        particlePositions[zBuffer(i)] < -rHalf ||
-        particlePositions[zBuffer(i)] > rHalf
+        particlePositions[zBuffer(i)] < -r ||
+        particlePositions[zBuffer(i)] > r
       )
         particleData.velocity.z = -particleData.velocity.z;
       if (
