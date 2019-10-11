@@ -6,11 +6,12 @@ require('three/examples/js/controls/OrbitControls');
 
 const canvasSketch = require('canvas-sketch');
 
-const particleCount = 250;
+const particleCount = 500;
 const d = 600;
 const r = d / 2;
 const minDistance = 150;
 const maxConnections = 10;
+const maxWidth = window.innerWidth * 0.8;
 
 const settings = {
   // Make the loop animated
@@ -21,10 +22,20 @@ const settings = {
   attributes: { antialias: true },
 };
 
+const bounds = [60, 80, 50, 100, 120, 200, 170, 140, 220, 210, 260, 280];
+
+const getBound = x =>
+  bounds[
+    Math.floor(
+      ((x + radius(maxWidth)) / ((maxWidth / bounds.length) * 100)) * 100
+    )
+  ];
+
 const xBuffer = i => i * 3;
 const yBuffer = i => i * 3 + 1;
 const zBuffer = i => i * 3 + 2;
 const triple = x => x * 3;
+const radius = x => x / 2;
 
 const maybeReverse = (buffer, direction, radius) => ({ pos, data, i }) =>
   pos[buffer(i)] < -radius || pos[buffer(i)] > radius
@@ -68,7 +79,7 @@ const sketch = ({ context }) => {
   helper.material.color.setHex(0x101010);
   helper.material.blending = THREE.AdditiveBlending;
   helper.material.transparent = true;
-  group.add(helper);
+  // group.add(helper);
 
   const segments = particleCount * particleCount;
   const positions = new Float32Array(triple(segments));
@@ -87,9 +98,11 @@ const sketch = ({ context }) => {
   const particlesData = [];
 
   for (let i = 0; i < particleCount; i++) {
-    const x = Math.random() * d - r;
-    const y = Math.random() * d - r;
-    const z = Math.random() * d - r;
+    const x = Math.random() * maxWidth - radius(maxWidth);
+    const bound = getBound(x);
+    console.log(x, bound);
+    const y = Math.random() * bound - radius(bound);
+    const z = Math.random() * bound - radius(bound);
     particlePositions[xBuffer(i)] = x;
     particlePositions[yBuffer(i)] = y;
     particlePositions[zBuffer(i)] = z;
