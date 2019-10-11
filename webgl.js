@@ -6,18 +6,11 @@ require('three/examples/js/controls/OrbitControls');
 
 const canvasSketch = require('canvas-sketch');
 
-const maxParticleCount = 1000;
-const particleCount = 500;
-const d = 700;
+const particleCount = 250;
+const d = 600;
 const r = d / 2;
-const effectController = {
-  showDots: true,
-  showLines: true,
-  minDistance: 150,
-  limitConnections: false,
-  maxConnections: 20,
-  particleCount: 500,
-};
+const minDistance = 150;
+const maxConnections = 10;
 
 const settings = {
   // Make the loop animated
@@ -32,6 +25,15 @@ const xBuffer = i => i * 3;
 const yBuffer = i => i * 3 + 1;
 const zBuffer = i => i * 3 + 2;
 const triple = x => x * 3;
+
+const maybeReverse = (buffer, direction, radius) => ({ pos, data, i }) =>
+  pos[buffer(i)] < -radius || pos[buffer(i)] > radius
+    ? (data.velocity[direction] = -data.velocity[direction])
+    : null;
+
+const maybeReverseX = maybeReverse(xBuffer, 'x', r);
+const maybeReverseY = maybeReverse(yBuffer, 'y', r);
+const maybeReverseZ = maybeReverse(zBuffer, 'z', r);
 
 const sketch = ({ context }) => {
   // Create a renderer
@@ -61,30 +63,30 @@ const sketch = ({ context }) => {
 
   // Helper box
   const helper = new THREE.BoxHelper(
-    new THREE.Mesh(new THREE.BoxBufferGeometry(r, r, r))
+    new THREE.Mesh(new THREE.BoxBufferGeometry(d, d, d))
   );
   helper.material.color.setHex(0x101010);
   helper.material.blending = THREE.AdditiveBlending;
   helper.material.transparent = true;
   group.add(helper);
 
-  const segments = maxParticleCount * maxParticleCount;
+  const segments = particleCount * particleCount;
   const positions = new Float32Array(triple(segments));
   const colors = new Float32Array(triple(segments));
 
   const pMaterial = new THREE.PointsMaterial({
     color: 0x1e90ff,
-    size: 3,
+    size: 4,
     blending: THREE.AdditiveBlending,
     transparent: true,
     sizeAttenuation: false,
   });
 
   const particles = new THREE.BufferGeometry();
-  const particlePositions = new Float32Array(triple(maxParticleCount));
+  const particlePositions = new Float32Array(triple(particleCount));
   const particlesData = [];
 
-  for (let i = 0; i < maxParticleCount; i++) {
+  for (let i = 0; i < particleCount; i++) {
     const x = Math.random() * d - r;
     const y = Math.random() * d - r;
     const z = Math.random() * d - r;
@@ -151,55 +153,50 @@ const sketch = ({ context }) => {
     let vertexpos = 0;
     let colorpos = 0;
     let numConnected = 0;
-    for (let i = 0; i < particleCount; i++) particlesData[i].numConnections = 0;
     for (let i = 0; i < particleCount; i++) {
       // get the particle
       const particleData = particlesData[i];
-      particlePositions[xBuffer(i)] += particleData.velocity.x;
-      particlePositions[yBuffer(i)] += particleData.velocity.y;
-      particlePositions[zBuffer(i)] += particleData.velocity.z;
-      if (
-        particlePositions[yBuffer(i)] < -r ||
-        particlePositions[yBuffer(i)] > r
-      )
-        particleData.velocity.y = -particleData.velocity.y;
-      if (
-        particlePositions[xBuffer(i)] < -r ||
-        particlePositions[xBuffer(i)] > r
-      )
-        particleData.velocity.x = -particleData.velocity.x;
-      if (
-        particlePositions[zBuffer(i)] < -r ||
-        particlePositions[zBuffer(i)] > r
-      )
-        particleData.velocity.z = -particleData.velocity.z;
-      if (
-        effectController.limitConnections &&
-        particleData.numConnections >= effectController.maxConnections
-      )
-        continue;
+      particleData.numConnections = 0;
+      const xIndex = xBuffer(i);
+      const yIndex = yBuffer(i);
+      const zIndex = zBuffer(i);
+
+      // set the particle positions by adding the velocity
+      particlePositions[xIndex] += particleData.velocity.x;
+      particlePositions[yIndex] += particleData.velocity.y;
+      particlePositions[zIndex] += particleData.velocity.z;
+
+      const params = { pos: particlePositions, data: particleData, i };
+
+      // If the y value is outside of the bounds of the box then reverse the velocity
+      maybeReverseX(params);
+      maybeReverseY(params);
+      maybeReverseZ(params);
+
+      // Check if a particle has the max number of connections and continue if it does
+      if (particleData.numConnections >= maxConnections) continue;
+
       // Check collision
       for (let j = i + 1; j < particleCount; j++) {
+        const x2Index = xBuffer(j);
+        const y2Index = yBuffer(j);
+        const z2Index = zBuffer(j);
         const particleDataB = particlesData[j];
-        if (
-          effectController.limitConnections &&
-          particleDataB.numConnections >= effectController.maxConnections
-        )
-          continue;
-        const dx = particlePositions[xBuffer(i)] - particlePositions[j * 3];
-        const dy = particlePositions[yBuffer(i)] - particlePositions[j * 3 + 1];
-        const dz = particlePositions[zBuffer(i)] - particlePositions[j * 3 + 2];
+        if (particleDataB.numConnections >= maxConnections) continue;
+        const dx = particlePositions[xIndex] - particlePositions[x2Index];
+        const dy = particlePositions[yIndex] - particlePositions[y2Index];
+        const dz = particlePositions[zIndex] - particlePositions[z2Index];
         const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (dist < effectController.minDistance) {
+        if (dist < minDistance) {
           particleData.numConnections++;
           particleDataB.numConnections++;
-          const alpha = 1.0 - dist / effectController.minDistance;
-          positions[vertexpos++] = particlePositions[xBuffer(i)];
-          positions[vertexpos++] = particlePositions[yBuffer(i)];
-          positions[vertexpos++] = particlePositions[zBuffer(i)];
-          positions[vertexpos++] = particlePositions[j * 3];
-          positions[vertexpos++] = particlePositions[j * 3 + 1];
-          positions[vertexpos++] = particlePositions[j * 3 + 2];
+          const alpha = 1.0 - dist / minDistance;
+          positions[vertexpos++] = particlePositions[xIndex];
+          positions[vertexpos++] = particlePositions[yIndex];
+          positions[vertexpos++] = particlePositions[zIndex];
+          positions[vertexpos++] = particlePositions[x2Index];
+          positions[vertexpos++] = particlePositions[y2Index];
+          positions[vertexpos++] = particlePositions[z2Index];
           colors[colorpos++] = alpha;
           colors[colorpos++] = alpha;
           colors[colorpos++] = alpha;
@@ -210,6 +207,7 @@ const sketch = ({ context }) => {
         }
       }
     }
+
     linesMesh.geometry.setDrawRange(0, numConnected * 2);
     linesMesh.geometry.attributes.position.needsUpdate = true;
     linesMesh.geometry.attributes.color.needsUpdate = true;
@@ -226,7 +224,7 @@ const sketch = ({ context }) => {
     },
     // Update & render your scene here
     render({ time }) {
-      requestAnimationFrame(animate);
+      animate();
       controls.update();
       renderer.render(scene, camera);
     },
