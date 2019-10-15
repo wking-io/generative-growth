@@ -6,7 +6,7 @@ require('three/examples/js/controls/OrbitControls');
 
 const canvasSketch = require('canvas-sketch');
 
-const particleCount = 500;
+const particleCount = 1;
 const minDistance = 150;
 const maxConnections = 10;
 const maxWidth = window.innerWidth * 0.8;
@@ -26,10 +26,10 @@ const zBuffer = i => i * 3 + 2;
 const triple = x => x * 3;
 const radius = x => x / 2;
 
-const maybeReverse = ({ pos, data, i }) => ({ buffer, bound, direction }) =>
-  pos[buffer(i)] < -radius(bound) || pos[buffer(i)] > radius(bound)
+const maybeReverse = ({ pos, data }) => ({ index, bound, direction }) =>
+  pos[index] < -radius(bound) || pos[index] > radius(bound)
     ? (data.velocity[direction] = -data.velocity[direction])
-    : null;
+    : data.velocity[direction];
 
 const init = ({ bg, context }) => {
   // Create a renderer
@@ -77,6 +77,21 @@ const sketch = ({ context }) => {
   const { renderer, scene, camera, controls, group } = init({
     bg: '#102A43',
     context,
+  });
+
+  // Helper box
+  bounds.forEach((bound, i) => {
+    const helperMesh = new THREE.Mesh(
+      new THREE.BoxBufferGeometry(maxWidth / bounds.length, bound, bound)
+    );
+
+    helperMesh.position.x =
+      (maxWidth / bounds.length) * (i + 1) - radius(maxWidth);
+    const helper = new THREE.BoxHelper(helperMesh);
+    helper.material.color.setHex(0x101010);
+    helper.material.blending = THREE.AdditiveBlending;
+    helper.material.transparent = true;
+    group.add(helper);
   });
 
   const segments = particleCount * particleCount;
@@ -168,13 +183,14 @@ const sketch = ({ context }) => {
       const maybeReverseWith = maybeReverse({
         pos: particlePositions,
         data: particleData,
-        i,
       });
 
+      console.log(bound);
+
       // If the y value is outside of the bounds of the box then reverse the velocity
-      maybeReverseWith({ buffer: xBuffer, bound: maxWidth, direction: 'x' });
-      maybeReverseWith({ buffer: yBuffer, bound, direction: 'y' });
-      maybeReverseWith({ buffer: zBuffer, bound, direction: 'z' });
+      maybeReverseWith({ index: xIndex, bound: maxWidth, direction: 'x' });
+      maybeReverseWith({ index: yIndex, bound, direction: 'y' });
+      maybeReverseWith({ index: zIndex, bound, direction: 'z' });
 
       // Check if a particle has the max number of connections and continue if it does
       if (particleData.numConnections >= maxConnections) continue;
