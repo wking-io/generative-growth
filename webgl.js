@@ -9,38 +9,26 @@ const canvasSketch = require('canvas-sketch');
 const particleCount = 1;
 const minDistance = 150;
 const maxConnections = 10;
-const maxWidth = window.innerWidth * 0.8;
-
+const maxWidth = Math.floor(window.innerWidth * 0.8);
 const bounds = [60, 80, 50, 100, 120, 200, 170, 140, 220, 210, 260, 280];
+const boundWidth = maxWidth / bounds.length;
 
 const getBound = x => {
   const boundIndex = Math.floor(
     ((x + radius(maxWidth)) / ((maxWidth / bounds.length) * 100)) * 100
   );
-  if (boundIndex < 0) {
-    const result = bounds[0];
-    if (typeof result == 'undefined') {
-      console.log(x, boundIndex, result);
-    }
-    return result;
-  } else if (boundIndex > bounds.length) {
-    const result = bounds[bounds.length];
-    if (typeof result == 'undefined') {
-      console.log(x, boundIndex, result);
-    }
-    return result;
+  if (boundIndex <= 0) {
+    return bounds[0];
+  } else if (boundIndex >= bounds.length) {
+    return bounds[bounds.length];
   }
-  const result = bounds[boundIndex];
-
-  if (typeof result == 'undefined') {
-    console.log(x, boundIndex, result);
-  }
-  return result;
+  return bounds[boundIndex];
 };
 const xBuffer = i => i * 3;
 const yBuffer = i => i * 3 + 1;
 const zBuffer = i => i * 3 + 2;
 const triple = x => x * 3;
+const plusOne = x => x + 1;
 const radius = x => x / 2;
 
 const maybeReverse = ({ pos, data }) => ({ index, bound, direction }) =>
@@ -101,9 +89,8 @@ const sketch = ({ context }) => {
     const helperMesh = new THREE.Mesh(
       new THREE.BoxBufferGeometry(maxWidth / bounds.length, bound, bound)
     );
-
     helperMesh.position.x =
-      (maxWidth / bounds.length) * (i + 1) - radius(maxWidth);
+      boundWidth * plusOne(i) - radius(maxWidth) - radius(boundWidth);
     const helper = new THREE.BoxHelper(helperMesh);
     helper.material.color.setHex(0x101010);
     helper.material.blending = THREE.AdditiveBlending;
