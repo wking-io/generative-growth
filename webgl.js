@@ -7,20 +7,9 @@ require('three/examples/js/controls/OrbitControls');
 const canvasSketch = require('canvas-sketch');
 
 const particleCount = 500;
-const d = 600;
-const r = d / 2;
 const minDistance = 150;
 const maxConnections = 10;
 const maxWidth = window.innerWidth * 0.8;
-
-const settings = {
-  // Make the loop animated
-  animate: true,
-  // Get a WebGL canvas rather than 2D
-  context: 'webgl',
-  // Turn on MSAA
-  attributes: { antialias: true },
-};
 
 const bounds = [60, 80, 50, 100, 120, 200, 170, 140, 220, 210, 260, 280];
 
@@ -37,23 +26,19 @@ const zBuffer = i => i * 3 + 2;
 const triple = x => x * 3;
 const radius = x => x / 2;
 
-const maybeReverse = (buffer, direction, radius) => ({ pos, data, i }) =>
-  pos[buffer(i)] < -radius || pos[buffer(i)] > radius
+const maybeReverse = ({ pos, data, i }) => ({ buffer, bound, direction }) =>
+  pos[buffer(i)] < -radius(bound) || pos[buffer(i)] > radius(bound)
     ? (data.velocity[direction] = -data.velocity[direction])
     : null;
 
-const maybeReverseX = maybeReverse(xBuffer, 'x', r);
-const maybeReverseY = maybeReverse(yBuffer, 'y', r);
-const maybeReverseZ = maybeReverse(zBuffer, 'z', r);
-
-const sketch = ({ context }) => {
+const init = ({ bg, context }) => {
   // Create a renderer
   const renderer = new THREE.WebGLRenderer({
     context,
   });
 
   // WebGL background color
-  renderer.setClearColor('#102A43', 1);
+  renderer.setClearColor(bg, 1);
 
   // Setup a camera
   const camera = new THREE.PerspectiveCamera(
@@ -72,14 +57,27 @@ const sketch = ({ context }) => {
   const group = new THREE.Group();
   scene.add(group);
 
-  // Helper box
-  const helper = new THREE.BoxHelper(
-    new THREE.Mesh(new THREE.BoxBufferGeometry(d, d, d))
-  );
-  helper.material.color.setHex(0x101010);
-  helper.material.blending = THREE.AdditiveBlending;
-  helper.material.transparent = true;
-  // group.add(helper);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.gammaInput = true;
+  renderer.gammaOutput = true;
+
+  // Specify an ambient/unlit colour
+  scene.add(new THREE.AmbientLight('#59314f'));
+
+  // Add some light
+  const light = new THREE.PointLight('#45caf7', 1, 15.5);
+  light.position.set(2, 2, -4).multiplyScalar(1.5);
+  scene.add(light);
+
+  return { renderer, scene, camera, controls, group };
+};
+
+const sketch = ({ context }) => {
+  const { renderer, scene, camera, controls, group } = init({
+    bg: '#102A43',
+    context,
+  });
 
   const segments = particleCount * particleCount;
   const positions = new Float32Array(triple(segments));
@@ -100,7 +98,6 @@ const sketch = ({ context }) => {
   for (let i = 0; i < particleCount; i++) {
     const x = Math.random() * maxWidth - radius(maxWidth);
     const bound = getBound(x);
-    console.log(x, bound);
     const y = Math.random() * bound - radius(bound);
     const z = Math.random() * bound - radius(bound);
     particlePositions[xBuffer(i)] = x;
@@ -149,19 +146,6 @@ const sketch = ({ context }) => {
   const linesMesh = new THREE.LineSegments(geometry, material);
   group.add(linesMesh);
 
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.gammaInput = true;
-  renderer.gammaOutput = true;
-
-  // Specify an ambient/unlit colour
-  scene.add(new THREE.AmbientLight('#59314f'));
-
-  // Add some light
-  const light = new THREE.PointLight('#45caf7', 1, 15.5);
-  light.position.set(2, 2, -4).multiplyScalar(1.5);
-  scene.add(light);
-
   function animate() {
     let vertexpos = 0;
     let colorpos = 0;
@@ -179,12 +163,18 @@ const sketch = ({ context }) => {
       particlePositions[yIndex] += particleData.velocity.y;
       particlePositions[zIndex] += particleData.velocity.z;
 
-      const params = { pos: particlePositions, data: particleData, i };
+      const bound = getBound(particlePositions[xIndex]);
+
+      const maybeReverseWith = maybeReverse({
+        pos: particlePositions,
+        data: particleData,
+        i,
+      });
 
       // If the y value is outside of the bounds of the box then reverse the velocity
-      maybeReverseX(params);
-      maybeReverseY(params);
-      maybeReverseZ(params);
+      maybeReverseWith({ buffer: xBuffer, bound: maxWidth, direction: 'x' });
+      maybeReverseWith({ buffer: yBuffer, bound, direction: 'y' });
+      maybeReverseWith({ buffer: zBuffer, bound, direction: 'z' });
 
       // Check if a particle has the max number of connections and continue if it does
       if (particleData.numConnections >= maxConnections) continue;
@@ -249,4 +239,11 @@ const sketch = ({ context }) => {
   };
 };
 
-canvasSketch(sketch, settings);
+canvasSketch(sketch, {
+  // Make the loop animated
+  animate: true,
+  // Get a WebGL canvas rather than 2D
+  context: 'webgl',
+  // Turn on MSAA
+  attributes: { antialias: true },
+});
