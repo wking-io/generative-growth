@@ -13,13 +13,30 @@ const maxWidth = window.innerWidth * 0.8;
 
 const bounds = [60, 80, 50, 100, 120, 200, 170, 140, 220, 210, 260, 280];
 
-const getBound = x =>
-  bounds[
-    Math.floor(
-      ((x + radius(maxWidth)) / ((maxWidth / bounds.length) * 100)) * 100
-    )
-  ];
+const getBound = x => {
+  const boundIndex = Math.floor(
+    ((x + radius(maxWidth)) / ((maxWidth / bounds.length) * 100)) * 100
+  );
+  if (boundIndex < 0) {
+    const result = bounds[0];
+    if (typeof result == 'undefined') {
+      console.log(x, boundIndex, result);
+    }
+    return result;
+  } else if (boundIndex > bounds.length) {
+    const result = bounds[bounds.length];
+    if (typeof result == 'undefined') {
+      console.log(x, boundIndex, result);
+    }
+    return result;
+  }
+  const result = bounds[boundIndex];
 
+  if (typeof result == 'undefined') {
+    console.log(x, boundIndex, result);
+  }
+  return result;
+};
 const xBuffer = i => i * 3;
 const yBuffer = i => i * 3 + 1;
 const zBuffer = i => i * 3 + 2;
@@ -184,8 +201,6 @@ const sketch = ({ context }) => {
         pos: particlePositions,
         data: particleData,
       });
-
-      console.log(bound);
 
       // If the y value is outside of the bounds of the box then reverse the velocity
       maybeReverseWith({ index: xIndex, bound: maxWidth, direction: 'x' });
