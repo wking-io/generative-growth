@@ -6,7 +6,7 @@ require('three/examples/js/controls/OrbitControls');
 
 const canvasSketch = require('canvas-sketch');
 
-const particleCount = 1;
+const particleCount = 500;
 const minDistance = 150;
 const maxConnections = 10;
 const maxWidth = Math.floor(window.innerWidth * 0.8);
@@ -31,10 +31,17 @@ const triple = x => x * 3;
 const plusOne = x => x + 1;
 const radius = x => x / 2;
 
-const maybeReverse = ({ pos, data }) => ({ index, bound, direction }) =>
-  pos[index] < -radius(bound) || pos[index] > radius(bound)
-    ? (data.velocity[direction] = -data.velocity[direction])
-    : data.velocity[direction];
+const maybeReverse = ({ pos, data }) => ({ index, bound, direction }) => {
+  if (
+    data.in[direction] &&
+    (pos[index] < -radius(bound) || pos[index] > radius(bound))
+  ) {
+    data.velocity[direction] = -data.velocity[direction];
+    data.in[direction] = false;
+  } else {
+    data.in[direction] = true;
+  }
+};
 
 const init = ({ bg, context }) => {
   // Create a renderer
@@ -130,6 +137,11 @@ const sketch = ({ context }) => {
         -1 + Math.random() * 2
       ),
       numConnections: 0,
+      in: {
+        x: true,
+        y: true,
+        z: true,
+      },
     });
   }
 
